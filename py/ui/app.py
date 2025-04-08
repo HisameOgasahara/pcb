@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import json
 from PIL import Image
 
 import sys
@@ -37,58 +38,57 @@ def main():
     
     # ROI 설정
     st.sidebar.subheader("ROI 설정")
-    roi_count = st.sidebar.number_input("ROI 개수", min_value=1, max_value=10, value=1)
+    roi_method = st.sidebar.radio("ROI 설정 방법", ["직접 입력", "JSON 파일 업로드"])
     
-    # 검출 설정
+    rois = []
+    
+    if roi_method == "직접 입력":
+        roi_count = st.sidebar.number_input("ROI 개수", min_value=1, max_value=10, value=1)
+    else:
+        # ROI JSON 파일 업로드
+        roi_file = st.sidebar.file_uploader("ROI JSON 파일 업로드", type=['json'])
+        if roi_file is not None:
+            try:
+                rois = json.load(roi_file)
+                st.sidebar.success(f"{len(rois)}개의 ROI가 로드되었습니다.")
+            except Exception as e:
+                st.sidebar.error(f"ROI 파일 로드 실패: {e}")
+    
+    # 설정 파일 업로드 또는 직접 설정
     st.sidebar.subheader("검출 설정")
-    mode_min = st.sidebar.slider("Mode 최소값", 0, 50, settings.get('mode_min'))
-    mode_max = st.sidebar.slider("Mode 최대값", mode_min, 100, settings.get('mode_max'))
-    secondary_peak_ratio = st.sidebar.slider("부 피크 비율", 0.1, 1.0, settings.get('secondary_peak_ratio'))
+    settings_method = st.sidebar.radio("설정 방법", ["직접 설정", "JSON 파일 업로드"])
     
-    # 원 검출 설정
-    st.sidebar.subheader("원 검출 설정")
-    min_radius = st.sidebar.slider("최소 반지름", 1, 50, settings.get('min_radius'))
-    max_radius = st.sidebar.slider("최대 반지름", min_radius, 100, settings.get('max_radius'))
-    
-    # 설정 저장
-    if st.sidebar.button("설정 저장"):
-        config = {
-            'debug_mode': debug_mode,
-            'mode_min': mode_min,
-            'mode_max': mode_max,
-            'secondary_peak_ratio': secondary_peak_ratio,
-            'min_radius': min_radius,
-            'max_radius': max_radius
-        }
-        settings.save_settings(config)
-        st.sidebar.success("설정이 저장되었습니다.")
-    
-    # 메인 화면
-    if uploaded_file is not None:
-        # 이미지 표시
-        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-        st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), caption="입력 이미지", use_column_width=True)
+    if settings_method == "JSON 파일 업로드":
+        settings_file = st.sidebar.file_uploader("설정 JSON 파일 업로드", type=['json'])
+        if settings_file is not None:
+            try:
+                user_settings = json.load(settings_file)
+                settings.user_settings = user_settings
+                st.sidebar.success("설정 파일이 로드되었습니다.")
+            except Exception as e:
+                st.sidebar.error(f"설정 파일 로드 실패: {e}")
         
-        # ROI 입력
-        rois = []
-        for i in range(roi_count):
-            st.subheader(f"ROI {i+1} 좌표 입력")
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                x1 = st.number_input(f"ROI {i+1} - X1", 0, image.shape[1], 100)
-                y1 = st.number_input(f"ROI {i+1} - Y1", 0, image.shape[0], 100)
-            
-            with col2:
-                x2 = st.number_input(f"ROI {i+1} - X2", x1, image.shape[1], x1 + 100)
-                y2 = st.number_input(f"ROI {i+1} - Y2", y1, image.shape[0], y1 + 100)
-            
-            rois.append([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
+        # 현재 설정 표시
+        st.sidebar.subheader("현재 설정")
+        st.sidebar.write(f"Mode 최소값: {settings.get('mode_min')}")
+        st.sidebar.write(f"Mode 최대값: {settings.get('mode_max')}")
+        st.sidebar.write(f"부 피크 비율: {settings.get('secondary_peak_ratio')}")
+        st.sidebar.write(f"최소 반지름: {settings.get('min_radius')}")
+        st.sidebar.write(f"최대 반지름: {settings.get('max_radius')}")
         
-        # 분석 실행
-        if st.button("결함 검출 실행"):
-            # 설정 준비
+    else:
+        # 검출 설정
+        mode_min = st.sidebar.slider("Mode 최소값", 0, 50, settings.get('mode_min'))
+        mode_max = st.sidebar.slider("Mode 최대값", mode_min, 100, settings.get('mode_max'))
+        secondary_peak_ratio = st.sidebar.slider("부 피크 비율", 0.1, 1.0, settings.get('secondary_peak_ratio'))
+        
+        # 원 검출 설정
+        st.sidebar.subheader("원 검출 설정")
+        min_radius = st.sidebar.slider("최소 반지름", 1, 50, settings.get('min_radius'))
+        max_radius = st.sidebar.slider("최대 반지름", min_radius, 100, settings.get('max_radius'))
+        
+        # 설정 저장
+        if st.sidebar.button("설정 저장"):
             config = {
                 'debug_mode': debug_mode,
                 'mode_min': mode_min,
@@ -97,50 +97,95 @@ def main():
                 'min_radius': min_radius,
                 'max_radius': max_radius
             }
-            
-            # 검출기 초기화
-            detector = HoleDefectDetector(config=config)
-            
-            # 결과 저장
-            results = []
-            
-            # 각 ROI 분석
-            for idx, roi in enumerate(rois):
-                st.subheader(f"ROI {idx+1} 분석 결과")
+            settings.save_settings(config)
+            st.sidebar.success("설정이 저장되었습니다.")
+    
+    # 메인 화면
+    if uploaded_file is not None:
+        # 이미지 표시
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), caption="입력 이미지", use_column_width=True)
+        
+        # ROI 직접 입력 (JSON 업로드가 아닌 경우만)
+        if roi_method == "직접 입력":
+            rois = []
+            for i in range(roi_count):
+                st.subheader(f"ROI {i+1} 좌표 입력")
+                col1, col2 = st.columns(2)
                 
-                # ROI 분석
-                result = detector.analyze_roi(image, roi, idx)
-                results.append(result)
+                with col1:
+                    x1 = st.number_input(f"ROI {i+1} - X1", 0, image.shape[1], 100)
+                    y1 = st.number_input(f"ROI {i+1} - Y1", 0, image.shape[0], 100)
                 
-                # 결함 여부 표시
-                if result['is_defective']:
-                    st.error(f"결함 감지: {', '.join(result['reasons'])}")
-                else:
-                    st.success("정상")
+                with col2:
+                    x2 = st.number_input(f"ROI {i+1} - X2", x1, image.shape[1], x1 + 100)
+                    y2 = st.number_input(f"ROI {i+1} - Y2", y1, image.shape[0], y1 + 100)
                 
-                # 통계 정보 표시
-                st.write("픽셀 통계:")
-                stats_to_show = ["Mean", "Median", "Mode", "Std Dev", "Has Secondary Peak"]
-                for stat in stats_to_show:
-                    if stat in result['stats']:
-                        if isinstance(result['stats'][stat], (int, float)):
-                            st.write(f"{stat}: {result['stats'][stat]:.2f}")
-                        else:
-                            st.write(f"{stat}: {result['stats'][stat]}")
+                rois.append([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
+        
+        # ROI가 있는지 확인
+        if not rois:
+            st.warning("ROI가 정의되지 않았습니다. ROI를 직접 입력하거나 JSON 파일을 업로드하세요.")
+        else:
+            # 분석 실행
+            if st.button("결함 검출 실행"):
+                # 설정 준비
+                config = {
+                    'debug_mode': debug_mode,
+                    'mode_min': settings.get('mode_min'),
+                    'mode_max': settings.get('mode_max'),
+                    'secondary_peak_ratio': settings.get('secondary_peak_ratio'),
+                    'min_radius': settings.get('min_radius'),
+                    'max_radius': settings.get('max_radius'),
+                    'min_dist': settings.get('min_dist', 20),
+                    'param1': settings.get('param1', 50),
+                    'param2': settings.get('param2', 30)
+                }
                 
-                # 시각화 표시 (디버그 모드에서만)
-                if debug_mode and result.get('visualization') is not None:
-                    st.pyplot(result['visualization'])
-            
-            # 결과 저장
-            if results:
-                json_path = save_results_to_json(results)
-                st.info(f"결과가 {json_path}에 저장되었습니다.")
+                # 검출기 초기화
+                detector = HoleDefectDetector(config=config)
                 
-                if debug_mode:
-                    viz_paths = save_visualizations(results)
-                    if viz_paths:
-                        st.info(f"시각화 결과가 저장되었습니다.")
+                # 결과 저장
+                results = []
+                
+                # 각 ROI 분석
+                for idx, roi in enumerate(rois):
+                    st.subheader(f"ROI {idx+1} 분석 결과")
+                    
+                    # ROI 분석
+                    result = detector.analyze_roi(image, roi, idx)
+                    results.append(result)
+                    
+                    # 결함 여부 표시
+                    if result['is_defective']:
+                        st.error(f"결함 감지: {', '.join(result['reasons'])}")
+                    else:
+                        st.success("정상")
+                    
+                    # 통계 정보 표시
+                    st.write("픽셀 통계:")
+                    stats_to_show = ["Mean", "Median", "Mode", "Std Dev", "Has Secondary Peak"]
+                    for stat in stats_to_show:
+                        if stat in result['stats']:
+                            if isinstance(result['stats'][stat], (int, float)):
+                                st.write(f"{stat}: {result['stats'][stat]:.2f}")
+                            else:
+                                st.write(f"{stat}: {result['stats'][stat]}")
+                    
+                    # 시각화 표시 (디버그 모드에서만)
+                    if debug_mode and result.get('visualization') is not None:
+                        st.pyplot(result['visualization'])
+                
+                # 결과 저장
+                if results:
+                    json_path = save_results_to_json(results)
+                    st.info(f"결과가 {json_path}에 저장되었습니다.")
+                    
+                    if debug_mode:
+                        viz_paths = save_visualizations(results)
+                        if viz_paths:
+                            st.info(f"시각화 결과가 저장되었습니다.")
 
 if __name__ == "__main__":
     main()
