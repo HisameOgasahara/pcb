@@ -1,0 +1,20 @@
+# 프로젝트 루트 디렉토리에서
+echo "# 이미지 파일
+py/data/images/
+*.bmp
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# 결과 파일
+results/
+
+# 로그
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+" > .gitignore

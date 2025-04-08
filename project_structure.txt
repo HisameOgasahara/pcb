@@ -1,0 +1,19 @@
+py/
+├── core/
+│   ├── __init__.py
+│   ├── detector.py          # 결함 검출 관련 핵심 로직
+│   ├── image_processor.py   # 이미지 처리 관련 기능
+│   └── utils.py             # 유틸리티 함수들
+├── config/
+│   ├── __init__.py
+│   ├── logging_config.py    # 로깅 설정
+│   └── settings.py          # 전체 설정 관리
+├── data/
+│   └── images/              # 분석할 이미지 저장
+├── logs/                    # 로그 파일 저장 디렉토리
+├── ui/
+│   ├── __init__.py
+│   └── app.py               # Streamlit UI 코드
+├── __init__.py
+├── main.py                  # 메인 실행 파일
+└── requirements.txt         # 필요 패키지 목록
