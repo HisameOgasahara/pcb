@@ -2,6 +2,18 @@ import os
 import logging
 import json
 from datetime import datetime
+import numpy as np
+
+# NumPy 데이터 타입을 처리하기 위한 JSON 인코더
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
 
 def save_results_to_json(results, output_dir="results"):
     """결과를 JSON 파일로 저장"""
@@ -22,9 +34,9 @@ def save_results_to_json(results, output_dir="results"):
             del result_copy['visualization']
         serializable_results.append(result_copy)
     
-    # JSON 저장
+    # JSON 저장 (NumpyEncoder 사용)
     with open(json_path, 'w') as f:
-        json.dump(serializable_results, f, indent=4)
+        json.dump(serializable_results, f, indent=4, cls=NumpyEncoder)
     
     logging.info(f"Results saved to {json_path}")
     return json_path
