@@ -1,0 +1,11 @@
+{
+    "mode_min": 10,
+    "mode_max": 17,
+    "secondary_peak_ratio": 0.6,
+    "min_dist": 20,
+    "param1": 50,
+    "param2": 30,
+    "min_radius": 5,
+    "max_radius": 50,
+    "debug_mode": true
+}

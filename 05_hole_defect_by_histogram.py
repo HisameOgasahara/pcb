@@ -199,7 +199,7 @@ def analyze_hole_histogram(image_path, roi_list):
 
 if __name__ == "__main__":
     # Set image path
-    image_path = r"C:\Users\kazuk\Downloads\code2\hole_detect\18th_L50_1.bmp"
+    image_path = r"C:\Users\hiirgi\Downloads\pcb_eng\converted_images\12th_L50_1.png"
     
     # Define ROI list
     roi_list = [
